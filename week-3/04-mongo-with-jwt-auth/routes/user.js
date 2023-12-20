@@ -1,24 +1,79 @@
 const { Router } = require("express");
-const router = Router();
+const { User , Course } = require("../db/index");
+const { secretKey } = require("../config/config");
 const userMiddleware = require("../middleware/user");
+const jwt = require("jsonwebtoken");
+const router = Router();
 
 // User Routes
-app.post('/signup', (req, res) => {
+router.post('/signup', async (req, res) => {
     // Implement user signup logic
+    const user = await User.findOne({ username: req.body.username, password: req.body.password });
+    if(user){
+        return res.status(401).json({
+            message: 'User Already Exist'
+        });
+    }
+    await User.create({
+        username : req.body.username,
+        password : req.body.password,
+        purchasedCourses: new Array()
+    });
+    res.json({
+        message : "User created successfully"
+    });
+
 });
 
-app.post('/signin', (req, res) => {
+router.post('/signin', async (req, res) => {
     // Implement admin signup logic
+    const user = await User.findOne({ username: req.body.username, password: req.body.password });
+    if(!user){
+        res.status(401).json({
+            message: 'User Does Not Exist'
+        });
+    }
+
+    const token = jwt.sign({ username : req.body.username }, secretKey);
+    res.json({
+        token: token
+    });
 });
 
-app.get('/courses', (req, res) => {
+router.get('/courses', userMiddleware, async (req, res) => {
     // Implement listing all courses logic
+    const courses = await Course.find();
+    res.json({
+        courses : courses
+    });
 });
 
-app.post('/courses/:courseId', userMiddleware, (req, res) => {
+router.post('/courses/:courseId', userMiddleware, async (req, res) => {
     // Implement course purchase logic
+    const course = await Course.findById(req.params.courseId);
+    const user = await User.findOne({ username: req.user.username });
+    // Check if the user already purchased the course
+    if (user.purchasedCourses.some(purchasedCourse => purchasedCourse._id.equals(course._id))) {
+        return res.status(400).json({ message: 'Course already purchased by the user' });
+    }
+  
+    // Add the course to the user's purchasedCourses array
+    user.purchasedCourses.push(course);
+
+    // Save the updated user object to the database
+    await user.save();
+
+    res.json({
+        message : "Course purchased successfully"
+    });
 });
 
-app.get('/purchasedCourses', userMiddleware, (req, res) => {
+router.get('/purchasedCourses', userMiddleware, async (req, res) => {
     // Implement fetching purchased courses logic
+    const user = await User.findOne({ username : req.user.username });
+    res.json({
+        purchasedCourses : user.purchasedCourses
+    });
 });
+
+module.exports = router;

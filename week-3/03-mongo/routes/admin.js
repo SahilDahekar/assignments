@@ -1,18 +1,42 @@
 const { Router } = require("express");
+const { Admin , Course } = require("../db/index");
 const adminMiddleware = require("../middleware/admin");
 const router = Router();
 
 // Admin Routes
-app.post('/signup', (req, res) => {
+router.post('/signup', async (req, res) => {
     // Implement admin signup logic
+    await Admin.create({
+        username : req.body.username,
+        password : req.body.password
+    });
+    res.json({
+        message: 'Admin created successfully'
+    });
 });
 
-app.post('/courses', adminMiddleware, (req, res) => {
+router.post('/courses', adminMiddleware, async (req, res) => {
     // Implement course creation logic
+    const course = new Course({
+        title : req.body.title,
+        description : req.body.description,
+        price : req.body.price,
+        image : req.body.image
+    })
+
+    const savedCourse = await course.save();
+    res.json({
+        message: 'Course created successfully',
+        courseId : savedCourse._id
+    });
 });
 
-app.get('/courses', adminMiddleware, (req, res) => {
+router.get('/courses', adminMiddleware, async (req, res) => {
     // Implement fetching all courses logic
+    const courses = await Course.find();
+    res.json({
+        courses : courses
+    });
 });
 
 module.exports = router;
