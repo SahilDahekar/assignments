@@ -44,15 +44,11 @@ function signJwt(username, password) {
  */
 function verifyJwt(token) {
     // Your code here
-    const verified = jwt.verify(token, jwtPassword , (err, decoded) => {
-        if(err){
-            return false;
-        }
-        return decoded;
-    });
-    const decoded = jwt.decode(token);
-    if(verified && decoded && (verified.username === decoded.username)){
+    try {
+        const verified = jwt.verify(token, jwtPassword);
         return true;
+    } catch (error) {
+        
     }
     return false;
 }
